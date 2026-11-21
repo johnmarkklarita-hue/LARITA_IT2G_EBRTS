@@ -36,7 +36,7 @@ public class StaffMenu {
                     deleteEquipment(staff);
                     break;
                 case "5":
-                    logDao.logAction(staff.getUsername(), "Logged out");
+                    logDao.logAction(staff.getUserId(), "LOGOUT", "Staff logged out");
                     System.out.println("Logged out successfully.");
                     return;
                 default:
@@ -50,15 +50,21 @@ public class StaffMenu {
         String name = scanner.nextLine();
         System.out.print("Enter category: ");
         String category = scanner.nextLine();
+        System.out.print("Enter quantity: ");
+        int quantity = Integer.parseInt(scanner.nextLine());
+        System.out.print("Enter condition (e.g., Good, Fair, New): ");
+        String condition = scanner.nextLine();
 
-        String sql = "INSERT INTO equipment (name, category, status, borrowed_by) VALUES (?, ?, 'AVAILABLE', NULL)";
+        String sql = "INSERT INTO equipment (equipmentname, category, quantity, condition, availabilitystatus) VALUES (?, ?, ?, ?, 'AVAILABLE')";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, name);
             pstmt.setString(2, category);
+            pstmt.setInt(3, quantity);
+            pstmt.setString(4, condition);
             pstmt.executeUpdate();
             System.out.println("Equipment added successfully!");
-            logDao.logAction(staff.getUsername(), "Added equipment: " + name);
+            logDao.logAction(staff.getUserId(), "CREATE_EQUIPMENT", "Added equipment: " + name);
         } catch (SQLException e) {
             System.err.println("Error adding equipment: " + e.getMessage());
         }
@@ -71,11 +77,12 @@ public class StaffMenu {
              ResultSet rs = stmt.executeQuery(sql)) {
             System.out.println("\n--- Equipment Inventory ---");
             while (rs.next()) {
-                System.out.println("ID: " + rs.getInt("id") +
-                        " | Name: " + rs.getString("name") +
+                System.out.println("ID: " + rs.getInt("equipment_id") +
+                        " | Name: " + rs.getString("equipmentname") +
                         " | Category: " + rs.getString("category") +
-                        " | Status: " + rs.getString("status") +
-                        " | Borrowed By: " + (rs.getString("borrowed_by") == null ? "None" : rs.getString("borrowed_by")));
+                        " | Qty: " + rs.getInt("quantity") +
+                        " | Condition: " + rs.getString("condition") +
+                        " | Status: " + rs.getString("availabilitystatus"));
             }
         } catch (SQLException e) {
             System.err.println("Error reading equipment: " + e.getMessage());
@@ -91,20 +98,26 @@ public class StaffMenu {
             String name = scanner.nextLine();
             System.out.print("Enter new category: ");
             String category = scanner.nextLine();
-            System.out.print("Enter new status (AVAILABLE / BORROWED / MAINTENANCE): ");
+            System.out.print("Enter new quantity: ");
+            int quantity = Integer.parseInt(scanner.nextLine());
+            System.out.print("Enter new condition: ");
+            String condition = scanner.nextLine();
+            System.out.print("Enter new availability status (AVAILABLE / BORROWED / MAINTENANCE): ");
             String status = scanner.nextLine().toUpperCase();
 
-            String sql = "UPDATE equipment SET name = ?, category = ?, status = ? WHERE id = ?";
+            String sql = "UPDATE equipment SET equipmentname = ?, category = ?, quantity = ?, condition = ?, availabilitystatus = ? WHERE equipment_id = ?";
             try (Connection conn = DatabaseConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, name);
                 pstmt.setString(2, category);
-                pstmt.setString(3, status);
-                pstmt.setInt(4, id);
+                pstmt.setInt(3, quantity);
+                pstmt.setString(4, condition);
+                pstmt.setString(5, status);
+                pstmt.setInt(6, id);
 
                 if (pstmt.executeUpdate() > 0) {
                     System.out.println("Equipment updated successfully!");
-                    logDao.logAction(staff.getUsername(), "Updated equipment ID: " + id);
+                    logDao.logAction(staff.getUserId(), "UPDATE_EQUIPMENT", "Updated equipment ID: " + id);
                 } else {
                     System.out.println("Equipment ID not found.");
                 }
@@ -119,13 +132,13 @@ public class StaffMenu {
         System.out.print("Enter Equipment ID to delete: ");
         try {
             int id = Integer.parseInt(scanner.nextLine());
-            String sql = "DELETE FROM equipment WHERE id = ?";
+            String sql = "DELETE FROM equipment WHERE equipment_id = ?";
             try (Connection conn = DatabaseConnection.getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setInt(1, id);
                 if (pstmt.executeUpdate() > 0) {
                     System.out.println("Equipment deleted successfully!");
-                    logDao.logAction(staff.getUsername(), "Deleted equipment ID: " + id);
+                    logDao.logAction(staff.getUserId(), "DELETE_EQUIPMENT", "Deleted equipment ID: " + id);
                 } else {
                     System.out.println("Equipment ID not found.");
                 }

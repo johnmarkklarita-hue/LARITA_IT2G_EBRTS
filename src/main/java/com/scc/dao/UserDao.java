@@ -9,12 +9,14 @@ public class UserDao {
 
     // CREATE
     public boolean addUser(User user) {
-        String sql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
+        String sql = "INSERT INTO users (fullname, username, password_hash, role, accountstatus) VALUES (?, ?, ?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, user.getUsername());
-            pstmt.setString(2, user.getPassword());
-            pstmt.setString(3, user.getRole());
+            pstmt.setString(1, user.getFullname());
+            pstmt.setString(2, user.getUsername());
+            pstmt.setString(3, user.getPasswordHash());
+            pstmt.setString(4, user.getRole());
+            pstmt.setString(5, user.getAccountStatus() != null ? user.getAccountStatus() : "ACTIVE");
             pstmt.executeUpdate();
             return true;
         } catch (SQLException e) {
@@ -32,10 +34,12 @@ public class UserDao {
             ResultSet rs = pstmt.executeQuery();
             if (rs.next()) {
                 return new User(
-                        rs.getInt("id"),
+                        rs.getInt("user_id"),
+                        rs.getString("fullname"),
                         rs.getString("username"),
-                        rs.getString("password"),
-                        rs.getString("role")
+                        rs.getString("password_hash"),
+                        rs.getString("role"),
+                        rs.getString("accountstatus")
                 );
             }
         } catch (SQLException e) {
@@ -53,10 +57,12 @@ public class UserDao {
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 users.add(new User(
-                        rs.getInt("id"),
+                        rs.getInt("user_id"),
+                        rs.getString("fullname"),
                         rs.getString("username"),
-                        rs.getString("password"),
-                        rs.getString("role")
+                        rs.getString("password_hash"),
+                        rs.getString("role"),
+                        rs.getString("accountstatus")
                 ));
             }
         } catch (SQLException e) {
@@ -66,13 +72,14 @@ public class UserDao {
     }
 
     // UPDATE
-    public boolean updateUser(int id, String newPassword, String newRole) {
-        String sql = "UPDATE users SET password = ?, role = ? WHERE id = ?";
+    public boolean updateUser(int userId, String newPasswordHash, String newRole, String newStatus) {
+        String sql = "UPDATE users SET password_hash = ?, role = ?, accountstatus = ? WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, newPassword);
+            pstmt.setString(1, newPasswordHash);
             pstmt.setString(2, newRole);
-            pstmt.setInt(3, id);
+            pstmt.setString(3, newStatus);
+            pstmt.setInt(4, userId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Error updating user: " + e.getMessage());
@@ -81,11 +88,11 @@ public class UserDao {
     }
 
     // DELETE
-    public boolean deleteUser(int id) {
-        String sql = "DELETE FROM users WHERE id = ?";
+    public boolean deleteUser(int userId) {
+        String sql = "DELETE FROM users WHERE user_id = ?";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
+            pstmt.setInt(1, userId);
             return pstmt.executeUpdate() > 0;
         } catch (SQLException e) {
             System.err.println("Error deleting user: " + e.getMessage());

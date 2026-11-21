@@ -7,12 +7,17 @@ import java.util.List;
 
 public class ActivityLogDao {
 
-    public void logAction(String username, String action) {
-        String sql = "INSERT INTO activity_logs (username, action) VALUES (?, ?)";
+    public void logAction(Integer userId, String action, String description) {
+        String sql = "INSERT INTO activity_logs (user_id, action, description) VALUES (?, ?, ?)";
         try (Connection conn = DatabaseConnection.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, username);
+            if (userId != null) {
+                pstmt.setInt(1, userId);
+            } else {
+                pstmt.setNull(1, Types.INTEGER);
+            }
             pstmt.setString(2, action);
+            pstmt.setString(3, description);
             pstmt.executeUpdate();
         } catch (SQLException e) {
             System.err.println("Error logging action: " + e.getMessage());
@@ -27,9 +32,9 @@ public class ActivityLogDao {
              ResultSet rs = stmt.executeQuery(sql)) {
             while (rs.next()) {
                 logs.add(new ActivityLog(
-                        rs.getInt("id"),
-                        rs.getString("username"),
-                        rs.getString("action"),
+                        rs.getInt("log_id"),
+                        String.valueOf(rs.getInt("user_id")),
+                        rs.getString("action") + " - " + rs.getString("description"),
                         rs.getString("timestamp")
                 ));
             }

@@ -42,7 +42,7 @@ public class AdminMenu {
                     viewLogs();
                     break;
                 case "6":
-                    logDao.logAction(admin.getUsername(), "Logged out");
+                    logDao.logAction(admin.getUserId(), "LOGOUT", "Admin logged out");
                     System.out.println("Logged out successfully.");
                     return;
                 default:
@@ -52,6 +52,8 @@ public class AdminMenu {
     }
 
     private void createUser(User admin) {
+        System.out.print("Enter full name: ");
+        String fullname = scanner.nextLine();
         System.out.print("Enter new username: ");
         String username = scanner.nextLine();
         System.out.print("Enter password: ");
@@ -59,9 +61,9 @@ public class AdminMenu {
         System.out.print("Enter role (ADMIN/STAFF/BORROWER): ");
         String role = scanner.nextLine().toUpperCase();
 
-        if (userDao.addUser(new User(username, password, role))) {
+        if (userDao.addUser(new User(fullname, username, password, role, "ACTIVE"))) {
             System.out.println("User created successfully!");
-            logDao.logAction(admin.getUsername(), "Created user: " + username);
+            logDao.logAction(admin.getUserId(), "CREATE_USER", "Created user: " + username);
         } else {
             System.out.println("Failed to create user.");
         }
@@ -71,7 +73,11 @@ public class AdminMenu {
         List<User> users = userDao.getAllUsers();
         System.out.println("\n--- User List ---");
         for (User u : users) {
-            System.out.println("ID: " + u.getId() + " | Username: " + u.getUsername() + " | Role: " + u.getRole());
+            System.out.println("ID: " + u.getUserId() +
+                    " | Full Name: " + u.getFullname() +
+                    " | Username: " + u.getUsername() +
+                    " | Role: " + u.getRole() +
+                    " | Status: " + u.getAccountStatus());
         }
     }
 
@@ -84,10 +90,12 @@ public class AdminMenu {
             String newPassword = scanner.nextLine();
             System.out.print("Enter new role (ADMIN/STAFF/BORROWER): ");
             String newRole = scanner.nextLine().toUpperCase();
+            System.out.print("Enter new status (ACTIVE/PENDING/SUSPENDED): ");
+            String newStatus = scanner.nextLine().toUpperCase();
 
-            if (userDao.updateUser(id, newPassword, newRole)) {
+            if (userDao.updateUser(id, newPassword, newRole, newStatus)) {
                 System.out.println("User updated successfully!");
-                logDao.logAction(admin.getUsername(), "Updated user ID: " + id);
+                logDao.logAction(admin.getUserId(), "UPDATE_USER", "Updated user ID: " + id);
             } else {
                 System.out.println("User ID not found.");
             }
@@ -101,13 +109,13 @@ public class AdminMenu {
         System.out.print("Enter User ID to delete: ");
         try {
             int id = Integer.parseInt(scanner.nextLine());
-            if (id == admin.getId()) {
+            if (id == admin.getUserId()) {
                 System.out.println("You cannot delete your own active admin account.");
                 return;
             }
             if (userDao.deleteUser(id)) {
                 System.out.println("User deleted successfully!");
-                logDao.logAction(admin.getUsername(), "Deleted user ID: " + id);
+                logDao.logAction(admin.getUserId(), "DELETE_USER", "Deleted user ID: " + id);
             } else {
                 System.out.println("User ID not found.");
             }
@@ -120,7 +128,7 @@ public class AdminMenu {
         List<ActivityLog> logs = logDao.getAllLogs();
         System.out.println("\n--- Activity Logs ---");
         for (ActivityLog log : logs) {
-            System.out.println("[" + log.getTimestamp() + "] " + log.getUsername() + ": " + log.getAction());
+            System.out.println("[" + log.getTimestamp() + "] User ID " + log.getUsername() + ": " + log.getAction());
         }
     }
 }

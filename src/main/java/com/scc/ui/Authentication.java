@@ -45,9 +45,14 @@ public class Authentication {
 
         User user = userDao.getUserByUsername(username);
 
-        if (user != null && user.getPassword().equals(password)) {
-            System.out.println("Login successful! Welcome, " + user.getUsername() + " (" + user.getRole() + ")");
-            logDao.logAction(user.getUsername(), "Logged in");
+        if (user != null && user.getPasswordHash().equals(password)) {
+            if (!"ACTIVE".equalsIgnoreCase(user.getAccountStatus()) && !"APPROVED".equalsIgnoreCase(user.getAccountStatus())) {
+                System.out.println("Access denied. Account status is: " + user.getAccountStatus());
+                return;
+            }
+
+            System.out.println("Login successful! Welcome, " + user.getFullname() + " (" + user.getRole() + ")");
+            logDao.logAction(user.getUserId(), "LOGIN", "User logged in");
 
             switch (user.getRole().toUpperCase()) {
                 case "ADMIN":
@@ -69,11 +74,14 @@ public class Authentication {
 
     private void register() {
         System.out.println("\n--- REGISTER NEW ACCOUNT ---");
+        System.out.print("Enter full name: ");
+        String fullname = scanner.nextLine().trim();
+
         System.out.print("Enter desired username: ");
         String username = scanner.nextLine().trim();
 
-        if (username.isEmpty()) {
-            System.out.println("Username cannot be empty.");
+        if (fullname.isEmpty() || username.isEmpty()) {
+            System.out.println("Full name and username cannot be empty.");
             return;
         }
 
@@ -91,10 +99,11 @@ public class Authentication {
             role = "BORROWER";
         }
 
-        User newUser = new User(username, password, role);
+        User newUser = new User(fullname, username, password, role, "ACTIVE");
         if (userDao.addUser(newUser)) {
             System.out.println("Registration successful! You can now log in as " + role + ".");
-            logDao.logAction(username, "Registered new " + role + " account");
+            User created = userDao.getUserByUsername(username);
+            logDao.logAction(created != null ? created.getUserId() : null, "REGISTER", "Registered new " + role + " account: " + username);
         } else {
             System.out.println("Registration failed.");
         }
